@@ -28,7 +28,7 @@ install(TARGETS calculator_hw
     RUNTIME DESTINATION /usr/local/bin
 )
 
-option(ENABLE_CLANG_FORMAT "Enable clang-format" OFF)
+option(ENABLE_CLANG_FORMAT "Enable clang-format" ON)
 if(ENABLE_CLANG_FORMAT)
     find_program(CLANG_FORMAT_PATH NAMES clang-format-19 clang-format REQUIRED)
     message(STATUS "Found clang-format: ${CLANG_FORMAT_PATH}")
@@ -61,7 +61,7 @@ if(ENABLE_CLANG_FORMAT)
     add_dependencies(calculator_hw clang-format-fix)
 endif()
 
-option(ENABLE_CLANG_TIDY "Enable clang-tidy" OFF)
+option(ENABLE_CLANG_TIDY "Enable clang-tidy" ON)
 if(ENABLE_CLANG_TIDY)
     find_program(CLANG_TIDY_PATH NAMES clang-tidy-19 clang-tidy REQUIRED)
     message(STATUS "Found clang-tidy: ${CLANG_TIDY_PATH}")
