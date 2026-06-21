@@ -31,17 +31,18 @@ struct Task
 
 void makeTask(int argc, char** argv, Task& task)
 {
-    int opt;
+    int opt = 0;
     bool hasValue1 = false;
     bool hasOperation = false;
     bool hasValue2 = false;
 
-    static struct option long_options[] = {{"help", no_argument, 0, 'h'},
-                                           {0, 0, 0, 0}};
+    static struct option longOptions[] = {{"help", no_argument, nullptr, 'h'},
+                                          {nullptr, 0, nullptr, 0}};
 
     optind = 1;
 
-    while ((opt = getopt_long(argc, argv, "ha:o:b:", long_options, NULL)) != -1)
+    while ((opt = getopt_long(argc, argv, "ha:o:b:", longOptions, nullptr)) !=
+           -1)
     {
         switch (opt)
         {
@@ -69,8 +70,7 @@ void makeTask(int argc, char** argv, Task& task)
 
     if (!hasValue1 || !hasOperation)
     {
-        fprintf(stderr, "Usage: %s -a <num> -o <op> [-b <num>]\n",
-		argv[0]); 
+        fprintf(stderr, "Usage: %s -a <num> -o <op> [-b <num>]\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
@@ -171,7 +171,7 @@ namespace app
 
 void applicationRun(int argc, char** argv)
 {
-    Task task;
+    Task task{};
     makeTask(argc, argv, task);
     makeCalculate(task);
     printResult(task);
