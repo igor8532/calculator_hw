@@ -1,7 +1,0 @@
-Download failed: Invalid argument.  Continuing without source file ./posix/./posix/getopt1.c.
-Download failed: Invalid argument.  Continuing without source file ./posix/./posix/getopt1.c.
-End of the file was already reached, use "list ." to list the current location again
-#0  getopt_long (argc=2, argv=0x7fffffffe358, options=0x55555555610f "ha:o:b:", long_options=0x555555558020 <(anonymous namespace)::makeTask(int, char**, (anonymous namespace)::Task&)::long_options>, opt_index=0x0) at ./posix/getopt1.c:30
-#1  0x000055555555566e in (anonymous namespace)::makeTask (argc=2, argv=0x7fffffffe358, task=...) at /home/igor/calculator_hw/src/app.cpp:44
-#2  0x00005555555559fd in app::applicationRun (argc=2, argv=0x7fffffffe358) at /home/igor/calculator_hw/src/app.cpp:175
-#3  0x0000555555555a6d in main (argc=2, argv=0x7fffffffe358) at /home/igor/calculator_hw/src/main.cpp:5
