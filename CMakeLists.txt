@@ -19,9 +19,9 @@ add_executable(calculator_hw
     src/main.cpp
 )
 
-target_include_directories(calculator_hw
+target_link_libraries(calculator_hw
     PRIVATE
-    ${libmath_ho_SOURCE_DIR}/include
+    libmath_ho
 )
 
 install(TARGETS calculator_hw
