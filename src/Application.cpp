@@ -1,4 +1,4 @@
-#include "app.h"
+#include "Application.h"
 
 #include "libmath.h"
 
@@ -7,10 +7,10 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-namespace
+namespace calculator
 {
 
-void printHelp()
+void Application::printHelp() const
 {
     printf("Usage: calculator -a <num> -o <op> [-b <num>]\n");
     printf("Options:\n");
@@ -20,16 +20,7 @@ void printHelp()
     printf("  -h, --help Show this help\n");
 }
 
-struct Task
-{
-    int value1;
-    int value2;
-    char operation;
-    int result;
-    int status;
-};
-
-void makeTask(int argc, char** argv, Task& task)
+void Application::getTask(int argc, char** argv)
 {
     int opt = 0;
     bool hasValue1 = false;
@@ -50,15 +41,15 @@ void makeTask(int argc, char** argv, Task& task)
                 printHelp();
                 exit(0);
             case 'a':
-                task.value1 = atoi(optarg);
+                task_.firstValue = atoi(optarg);
                 hasValue1 = true;
                 break;
             case 'o':
-                task.operation = *(optarg);
+                task_.operation = *(optarg);
                 hasOperation = true;
                 break;
             case 'b':
-                task.value2 = atoi(optarg);
+                task_.secondValue = atoi(optarg);
                 hasValue2 = true;
                 break;
             default:
@@ -74,87 +65,88 @@ void makeTask(int argc, char** argv, Task& task)
         exit(EXIT_FAILURE);
     }
 
-    if (task.operation == '!' && hasValue2)
+    if (task_.operation == '!' && hasValue2)
     {
         fprintf(stderr, "Warning: factorial ignores -b\n");
-        task.value2 = 0;
+        task_.secondValue = 0;
     }
 
-    if (task.operation != '!' && !hasValue2)
+    if (task_.operation != '!' && !hasValue2)
     {
         fprintf(stderr, "Error: binary operations need -b\n");
         exit(EXIT_FAILURE);
     }
 }
 
-void makeCalculate(Task& task)
+void Application::makeCalculate()
 {
-    task.status = 0;
-    switch (task.operation)
+    task_.status = 0;
+    switch (task_.operation)
     {
         case '+':
-            task.status =
-                libmath::addition(task.value1, task.value2, task.result);
+            task_.status = libmath::addition(task_.firstValue,
+                                             task_.secondValue, task_.result);
             break;
         case '-':
-            task.status =
-                libmath::subtraction(task.value1, task.value2, task.result);
+            task_.status = libmath::subtraction(
+                task_.firstValue, task_.secondValue, task_.result);
             break;
         case '*':
-            task.status =
-                libmath::multiplication(task.value1, task.value2, task.result);
+            task_.status = libmath::multiplication(
+                task_.firstValue, task_.secondValue, task_.result);
             break;
         case '/':
-            task.status =
-                libmath::division(task.value1, task.value2, task.result);
+            task_.status = libmath::division(task_.firstValue,
+                                             task_.secondValue, task_.result);
             break;
         case '^':
-            task.status = libmath::power(task.value1, task.value2, task.result);
+            task_.status = libmath::power(task_.firstValue, task_.secondValue,
+                                          task_.result);
             break;
         case '!':
-            task.status = libmath::factorial(task.value1, task.result);
+            task_.status = libmath::factorial(task_.firstValue, task_.result);
             break;
         default:
-            task.status = 1;
+            task_.status = 1;
             return;
     }
 }
 
-void printResult(Task task)
+void Application::printResult() const
 {
-    if (task.status == 0)
+    if (task_.status == 0)
     {
-        if (task.operation == '!')
+        if (task_.operation == '!')
         {
-            printf("%d! = %d\n", task.value1, task.result);
+            printf("%d! = %d\n", task_.firstValue, task_.result);
         }
         else
         {
-            printf("%d %c %d = %d\n", task.value1, task.operation, task.value2,
-                   task.result);
+            printf("%d %c %d = %d\n", task_.firstValue, task_.operation,
+                   task_.secondValue, task_.result);
         }
     }
-    else if (task.status == -1)
+    else if (task_.status == -1)
     {
         printf("Error! Division by zero!\n");
     }
-    else if (task.status == 1)
+    else if (task_.status == 1)
     {
         printf("Error! Unknown operation!\n");
     }
-    else if (task.status == -2)
+    else if (task_.status == -2)
     {
         printf("Error! Overflow!\n");
     }
-    else if (task.status == -3)
+    else if (task_.status == -3)
     {
         printf("Error! Negative power!\n");
     }
-    else if (task.status == -4)
+    else if (task_.status == -4)
     {
         printf("Error! 0^0 mathematically indefinite\n");
     }
-    else if (task.status == -5)
+    else if (task_.status == -5)
     {
         printf("To raise to a power, select a non-negative number\n");
     }
@@ -164,17 +156,11 @@ void printResult(Task task)
     }
 }
 
-} // namespace
-
-namespace app
+void Application::run(int argc, char** argv)
 {
-
-void applicationRun(int argc, char** argv)
-{
-    Task task{};
-    makeTask(argc, argv, task);
-    makeCalculate(task);
-    printResult(task);
+    getTask(argc, argv);
+    makeCalculate();
+    printResult();
 }
 
-} // namespace app
+} // namespace calculator

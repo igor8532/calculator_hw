@@ -1,6 +1,7 @@
-#include "app.h"
+#include "Application.h"
 
 int main(int argc, char** argv)
 {
-    app::applicationRun(argc, argv);
+    calculator::Application application;
+    application.run(argc, argv);
 }

@@ -15,13 +15,18 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(libmath_ho)
 
 add_executable(calculator_hw
-    src/app.cpp
+    src/Application.cpp
     src/main.cpp
+)
+
+target_include_directories(calculator_hw
+    PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
 )
 
 target_link_libraries(calculator_hw
     PRIVATE
-    libmath_ho
+        libmath_ho
 )
 
 install(TARGETS calculator_hw
@@ -34,7 +39,7 @@ if(ENABLE_CLANG_FORMAT)
     message(STATUS "Found clang-format: ${CLANG_FORMAT_PATH}")
 
     file(GLOB_RECURSE CLANG_FORMAT_SRC CONFIGURE_DEPENDS
-        src/*.h
+        include/*.h
         src/*.cpp
     )
 
