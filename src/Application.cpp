@@ -2,79 +2,98 @@
 
 #include "libmath.h"
 
-#include <getopt.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
+#include <nlohmann/json.hpp>
+
+#include <iostream>
+#include <stdexcept>
+#include <string>
 
 namespace calculator
 {
 
 void Application::printHelp() const
 {
-    printf("Usage: calculator -a <num> -o <op> [-b <num>]\n");
-    printf("Options:\n");
-    printf("  -a <num>   First operand\n");
-    printf("  -o <op>    Operation (+, -, *, /, !, ^)\n");
-    printf("  -b <num>   Second operand (for binary operations)\n");
-    printf("  -h, --help Show this help\n");
+    std::cout << R"(Usage:
+  calculator_hw '<json>'
+
+JSON format:
+{
+  "firstValue": 2,
+  "secondValue": 3,
+  "operation": "+"
+}
+
+Examples:
+  calculator_hw '{"firstValue":2,"secondValue":3,"operation":"+"}'
+  calculator_hw '{"firstValue":5,"operation":"!"}'
+)";
 }
 
 void Application::getTask(int argc, char** argv)
 {
-    int opt = 0;
-    bool hasValue1 = false;
-    bool hasOperation = false;
-    bool hasValue2 = false;
-
-    static struct option longOptions[] = {{"help", no_argument, nullptr, 'h'},
-                                          {nullptr, 0, nullptr, 0}};
-
-    optind = 1;
-
-    while ((opt = getopt_long(argc, argv, "ha:o:b:", longOptions, nullptr)) !=
-           -1)
+    if (argc != 2)
     {
-        switch (opt)
+        throw std::invalid_argument(
+            "Usage: calculator_hw "
+            "'{\"firstValue\":2,\"secondValue\":3,\"operation\":\"+\"}'");
+    }
+
+    if (std::string(argv[1]) == "-h" || std::string(argv[1]) == "--help")
+    {
+        printHelp();
+        std::exit(EXIT_SUCCESS);
+    }
+
+    nlohmann::json data;
+
+    try
+    {
+        data = nlohmann::json::parse(argv[1]);
+    }
+    catch (const nlohmann::json::parse_error&)
+    {
+        throw std::invalid_argument("Invalid JSON format");
+    }
+
+    if (!data.contains("firstValue"))
+    {
+        throw std::invalid_argument("Missing field: firstValue");
+    }
+
+    task_.firstValue = data.at("firstValue").get<int>();
+
+    if (!data.contains("operation"))
+    {
+        throw std::invalid_argument("Missing field: operation");
+    }
+
+    const std::string operation = data.at("operation").get<std::string>();
+
+    if (operation.size() != 1)
+    {
+        throw std::invalid_argument(
+            "Operation must contain exactly one character");
+    }
+
+    task_.operation = operation[0];
+
+    if (task_.operation == '!')
+    {
+        if (data.contains("secondValue"))
         {
-            case 'h':
-                printHelp();
-                exit(0);
-            case 'a':
-                task_.firstValue = atoi(optarg);
-                hasValue1 = true;
-                break;
-            case 'o':
-                task_.operation = *(optarg);
-                hasOperation = true;
-                break;
-            case 'b':
-                task_.secondValue = atoi(optarg);
-                hasValue2 = true;
-                break;
-            default:
-                fprintf(stderr, "Usage: %s -a <num> -o <op> [-b <num>]\n",
-                        argv[0]);
-                exit(EXIT_FAILURE);
+            std::cout << "Warning: factorial ignores secondValue\n";
         }
-    }
 
-    if (!hasValue1 || !hasOperation)
-    {
-        fprintf(stderr, "Usage: %s -a <num> -o <op> [-b <num>]\n", argv[0]);
-        exit(EXIT_FAILURE);
-    }
-
-    if (task_.operation == '!' && hasValue2)
-    {
-        fprintf(stderr, "Warning: factorial ignores -b\n");
         task_.secondValue = 0;
     }
-
-    if (task_.operation != '!' && !hasValue2)
+    else
     {
-        fprintf(stderr, "Error: binary operations need -b\n");
-        exit(EXIT_FAILURE);
+        if (!data.contains("secondValue"))
+        {
+            throw std::invalid_argument("Missing field: secondValue");
+        }
+
+        task_.secondValue = data.at("secondValue").get<int>();
     }
 }
 
@@ -108,59 +127,63 @@ void Application::makeCalculate()
             break;
         default:
             task_.status = 1;
+            break;
+    }
+
+    switch (task_.status)
+    {
+        case 0:
             return;
+
+        case -1:
+            throw std::runtime_error("Division by zero");
+
+        case 1:
+            throw std::invalid_argument("Unknown operation");
+
+        case -2:
+            throw std::overflow_error("Overflow");
+
+        case -3:
+            throw std::invalid_argument("Negative power");
+
+        case -4:
+            throw std::domain_error("0^0 is mathematically undefined");
+
+        case -5:
+            throw std::domain_error(
+                "Factorial is defined only for non-negative integers");
+
+        default:
+            throw std::runtime_error("Unknown error");
     }
 }
 
 void Application::printResult() const
 {
-    if (task_.status == 0)
+    if (task_.operation == '!')
     {
-        if (task_.operation == '!')
-        {
-            printf("%d! = %d\n", task_.firstValue, task_.result);
-        }
-        else
-        {
-            printf("%d %c %d = %d\n", task_.firstValue, task_.operation,
-                   task_.secondValue, task_.result);
-        }
-    }
-    else if (task_.status == -1)
-    {
-        printf("Error! Division by zero!\n");
-    }
-    else if (task_.status == 1)
-    {
-        printf("Error! Unknown operation!\n");
-    }
-    else if (task_.status == -2)
-    {
-        printf("Error! Overflow!\n");
-    }
-    else if (task_.status == -3)
-    {
-        printf("Error! Negative power!\n");
-    }
-    else if (task_.status == -4)
-    {
-        printf("Error! 0^0 mathematically indefinite\n");
-    }
-    else if (task_.status == -5)
-    {
-        printf("To raise to a power, select a non-negative number\n");
+        std::cout << task_.firstValue << "! = " << task_.result << '\n';
     }
     else
     {
-        printf("Unknown error\n");
+        std::cout << task_.firstValue << " " << task_.operation << " "
+                  << task_.secondValue << " = " << task_.result << '\n';
     }
 }
 
 void Application::run(int argc, char** argv)
 {
-    getTask(argc, argv);
-    makeCalculate();
-    printResult();
+    try
+    {
+        getTask(argc, argv);
+        makeCalculate();
+        printResult();
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << e.what() << '\n';
+    }
 }
 
 } // namespace calculator

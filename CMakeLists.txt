@@ -12,7 +12,16 @@ FetchContent_Declare(
     GIT_TAG main
 )
 
-FetchContent_MakeAvailable(libmath_ho)
+FetchContent_Declare(
+    nlohmann_json
+    GIT_REPOSITORY https://github.com/nlohmann/json.git
+    GIT_TAG v3.12.0
+)
+
+FetchContent_MakeAvailable(
+    libmath_ho
+    nlohmann_json
+)
 
 add_executable(calculator_hw
     src/Application.cpp
@@ -27,6 +36,7 @@ target_include_directories(calculator_hw
 target_link_libraries(calculator_hw
     PRIVATE
         libmath_ho
+        nlohmann_json::nlohmann_json
 )
 
 install(TARGETS calculator_hw
