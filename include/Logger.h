@@ -23,6 +23,8 @@ class Logger
     Logger();
     ~Logger();
 
+    static void createDirectory(const std::string& path);
+
     class Impl;
     std::unique_ptr<Impl> pImpl;
 };

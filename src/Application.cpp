@@ -50,7 +50,7 @@ void Application::getTask(int argc, char** argv)
     if (std::string(argv[1]) == "-h" || std::string(argv[1]) == "--help")
     {
         printHelp();
-        std::exit(EXIT_SUCCESS);
+        throw std::runtime_error("Help displayed");
     }
 
     nlohmann::json data;
@@ -258,9 +258,21 @@ void Application::run(int argc, char** argv)
     auto& logger = Logger::getInstance();
     logger.debug("Application::run: started");
 
-    getTask(argc, argv);
-    makeCalculate();
-    printResult();
+    try
+    {
+        getTask(argc, argv);
+        makeCalculate();
+        printResult();
+    }
+    catch (const std::runtime_error& e)
+    {
+        if (std::string(e.what()) == "Help displayed")
+        {
+            return;
+        }
+
+        throw;
+    }
 
     logger.debug("Application::run: completed");
 }

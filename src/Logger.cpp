@@ -11,7 +11,7 @@
 namespace calculator
 {
 
-void createDirectory(const std::string& path)
+void Logger::createDirectory(const std::string& path)
 {
     struct stat st;
     if (stat(path.c_str(), &st) == -1)
@@ -31,7 +31,7 @@ class Logger::Impl
 
     Impl()
     {
-        createDirectory("logs");
+        Logger::createDirectory("logs");
 
         try
         {
