@@ -18,13 +18,21 @@ FetchContent_Declare(
     GIT_TAG v3.12.0
 )
 
+FetchContent_Declare(
+    spdlog
+    GIT_REPOSITORY https://github.com/gabime/spdlog.git
+    GIT_TAG v1.14.1
+)
+
 FetchContent_MakeAvailable(
     libmath_ho
     nlohmann_json
+    spdlog
 )
 
 add_executable(calculator_hw
     src/Application.cpp
+    src/Logger.cpp
     src/main.cpp
 )
 
@@ -37,6 +45,7 @@ target_link_libraries(calculator_hw
     PRIVATE
         libmath_ho
         nlohmann_json::nlohmann_json
+        spdlog::spdlog
 )
 
 install(TARGETS calculator_hw
