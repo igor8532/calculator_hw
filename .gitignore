@@ -54,9 +54,12 @@ compile_commands.json
 
 # Temporary files
 *.tmp
-*.log
 *.bak
 *.swp
+
+# logs
+logs/
+*.log
 
 # vcpkg
 vcpkg_installed/
