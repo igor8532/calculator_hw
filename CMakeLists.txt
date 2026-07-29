@@ -6,6 +6,7 @@ set(SOURCES_COMMON
     src/Application.cpp
     src/Logger.cpp
     src/DataBase.cpp
+    src/SignalHandler.cpp
 )
 
 set(INCLUDE_DIRS
