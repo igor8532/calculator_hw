@@ -5,6 +5,7 @@ project(calculator_hw)
 set(SOURCES_COMMON
     src/Application.cpp
     src/Logger.cpp
+    src/DataBase.cpp
 )
 
 set(INCLUDE_DIRS
@@ -15,6 +16,7 @@ set(LIBRARIES_COMMON
     libmath_ho
     nlohmann_json::nlohmann_json
     spdlog::spdlog
+    PostgreSQL::PostgreSQL
 )
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -44,6 +46,8 @@ FetchContent_MakeAvailable(
     nlohmann_json
     spdlog
 )
+
+find_package(PostgreSQL REQUIRED)
 
 add_executable(calculator_hw
     ${SOURCES_COMMON}
