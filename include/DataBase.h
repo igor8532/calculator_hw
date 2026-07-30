@@ -1,5 +1,6 @@
 #pragma once
 
+#include "DataBaseConfig.h"
 #include "Task.h"
 
 #include <libpq-fe.h>
@@ -18,11 +19,11 @@ class DataBase
   public:
     struct Config
     {
-        std::string host{"localhost"};
-        std::uint16_t port{5432};
-        std::string database{"calculator"};
-        std::string username{"calculator"};
-        std::string password{"calculator"};
+        std::string host{DB_HOST};
+        std::uint16_t port{DB_PORT};
+        std::string database{DB_NAME};
+        std::string username{DB_USERNAME};
+        std::string password{DB_PASSWORD};
     };
 
     DataBase();
