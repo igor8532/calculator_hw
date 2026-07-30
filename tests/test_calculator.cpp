@@ -2,9 +2,16 @@
 
 #include "Application.h"
 #include "Logger.h" // Чтобы убедиться, что логгер не мешает
+#include "DataBaseConfig.h"
 
 #include <iostream>
 #include <string>
+#include <libpq-fe.h>
+#include <memory>
+#include <stdexcept>
+
+namespace
+{
 
 void runCalculator(const std::string& jsonInput, std::string& stdOutput, std::string& stdError) {
     char* argv[] = {
@@ -39,6 +46,62 @@ void runCalculatorWithHelp(std::string& stdOutput) {
     app.run(argc, argv);
     stdOutput = testing::internal::GetCapturedStdout();
 }
+
+using ConnectionPtr = std::unique_ptr<PGconn, decltype(&PQfinish)>;
+using ResultPtr = std::unique_ptr<PGresult, decltype(&PQclear)>;
+
+ConnectionPtr createConnection()
+{
+    const std::string connectionString =
+        "host=" + std::string(calculator::DB_HOST) +
+        " port=" + std::to_string(calculator::DB_PORT) +
+        " dbname=" + std::string(calculator::DB_NAME) +
+        " user=" + std::string(calculator::DB_USERNAME) +
+        " password=" + std::string(calculator::DB_PASSWORD);
+
+    ConnectionPtr connection(
+        PQconnectdb(connectionString.c_str()),
+        &PQfinish);
+
+    if (PQstatus(connection.get()) != CONNECTION_OK)
+    {
+        throw std::runtime_error(PQerrorMessage(connection.get()));
+    }
+
+    return connection;
+}
+
+void clearDatabase()
+{
+    auto connection = createConnection();
+
+    ResultPtr result(
+        PQexec(connection.get(), "DELETE FROM operations;"),
+        &PQclear);
+
+    if (PQresultStatus(result.get()) != PGRES_COMMAND_OK)
+    {
+        throw std::runtime_error(PQerrorMessage(connection.get()));
+    }
+}
+
+int getRecordCount()
+{
+    auto connection = createConnection();
+
+    ResultPtr result(
+        PQexec(connection.get(), "SELECT COUNT(*) FROM operations;"),
+        &PQclear);
+
+    if (PQresultStatus(result.get()) != PGRES_TUPLES_OK)
+    {
+        throw std::runtime_error(PQerrorMessage(connection.get()));
+    }
+
+    return std::stoi(PQgetvalue(result.get(), 0, 0));
+}
+
+} // namespace
 
 TEST(CalculatorTest, HandlesCorrectAddition) {
     std::string output, error;
@@ -151,4 +214,57 @@ TEST(CalculatorTest, HandlesHelp) {
     
     EXPECT_TRUE(output.find("Usage:") != std::string::npos);
     EXPECT_TRUE(output.find("calculator_hw '<json>'") != std::string::npos);
+}
+
+TEST(CalculatorTest, StoresCalculationInDatabase)
+{
+    clearDatabase();
+
+    std::string output, error;
+
+    runCalculator(
+        R"({"firstValue":2,"secondValue":3,"operation":"+"})",
+        output,
+        error);
+
+    EXPECT_EQ(getRecordCount(), 1);
+}
+
+TEST(CalculatorTest, DoesNotDuplicateCalculation)
+{
+    clearDatabase();
+
+    std::string output1, error1;
+    std::string output2, error2;
+
+    const std::string json =
+        R"({"firstValue":2,"secondValue":3,"operation":"+"})";
+
+    runCalculator(json, output1, error1);
+    runCalculator(json, output2, error2);
+
+    EXPECT_EQ(getRecordCount(), 1);
+}
+
+TEST(CalculatorTest, HandlesCommutativeAddition)
+{
+    clearDatabase();
+
+    std::string output1, error1;
+    std::string output2, error2;
+
+    runCalculator(
+        R"({"firstValue":2,"secondValue":5,"operation":"+"})",
+        output1,
+        error1);
+
+    runCalculator(
+        R"({"firstValue":5,"secondValue":2,"operation":"+"})",
+        output2,
+        error2);
+
+    EXPECT_EQ(getRecordCount(), 1);
+
+    EXPECT_TRUE(error1.empty());
+    EXPECT_TRUE(error2.empty());
 }
