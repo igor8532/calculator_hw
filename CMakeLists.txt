@@ -5,6 +5,8 @@ project(calculator_hw)
 set(SOURCES_COMMON
     src/Application.cpp
     src/Logger.cpp
+    src/DataBase.cpp
+    src/SignalHandler.cpp
 )
 
 set(INCLUDE_DIRS
@@ -15,6 +17,7 @@ set(LIBRARIES_COMMON
     libmath_ho
     nlohmann_json::nlohmann_json
     spdlog::spdlog
+    PostgreSQL::PostgreSQL
 )
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -44,6 +47,8 @@ FetchContent_MakeAvailable(
     nlohmann_json
     spdlog
 )
+
+find_package(PostgreSQL REQUIRED)
 
 add_executable(calculator_hw
     ${SOURCES_COMMON}
@@ -110,7 +115,6 @@ option(ENABLE_TESTS "Enable unit tests" ON)
 if(ENABLE_TESTS)
     enable_testing()
     
-    include(FetchContent)
     FetchContent_Declare(
         googletest
         GIT_REPOSITORY https://github.com/google/googletest.git
@@ -141,4 +145,23 @@ if(ENABLE_TESTS)
 
     include(GoogleTest)
     gtest_discover_tests(calculator_tests)
+
+    find_program(VALGRIND_EXECUTABLE valgrind)
+
+    if(VALGRIND_EXECUTABLE)
+        add_test(
+            NAME calculator_tests_valgrind
+            COMMAND
+                ${VALGRIND_EXECUTABLE}
+                --leak-check=full
+                --show-leak-kinds=all
+                --track-origins=yes
+                --error-exitcode=1
+                $<TARGET_FILE:calculator_tests>
+        )
+
+        message(STATUS "Valgrind test enabled: ${VALGRIND_EXECUTABLE}")
+    else()
+        message(WARNING "Valgrind not found. Skipping Valgrind test.")
+    endif()
 endif()

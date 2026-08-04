@@ -261,7 +261,17 @@ void Application::run(int argc, char** argv)
     try
     {
         getTask(argc, argv);
-        makeCalculate();
+
+        if (const auto dbRecord = dataBase_.getRecord(task_))
+        {
+            task_ = *dbRecord;
+        }
+        else
+        {
+            makeCalculate();
+            dataBase_.writeRecord(task_);
+        }
+
         printResult();
     }
     catch (const std::runtime_error& e)

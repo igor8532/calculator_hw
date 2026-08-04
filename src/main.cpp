@@ -1,5 +1,6 @@
 #include "Application.h"
 #include "Logger.h"
+#include "SignalHandler.h"
 
 #include <iostream>
 
@@ -10,8 +11,15 @@ int main(int argc, char** argv)
     try
     {
         logger.info("=== Application started ===");
+
+        calculator::SignalHandler::setup();
+
         calculator::Application application;
         application.run(argc, argv);
+        logger.info("=== Application waiting for signals ===");
+
+        calculator::SignalHandler::wait();
+
         logger.info("=== Application finished successfully ===");
     }
     catch (const std::exception& e)

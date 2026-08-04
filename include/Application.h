@@ -1,5 +1,6 @@
 #pragma once
 
+#include "DataBase.h"
 #include "Task.h"
 
 namespace calculator
@@ -18,6 +19,7 @@ class Application
 
   private:
     Task task_;
+    DataBase dataBase_;
 };
 
 } // namespace calculator
