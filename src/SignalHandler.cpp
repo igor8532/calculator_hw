@@ -2,66 +2,70 @@
 
 #include "Logger.h"
 
-#include <unistd.h>
-
 #include <stdexcept>
 
 namespace calculator
 {
 
-volatile sig_atomic_t SignalHandler::running_ = 1;
-
-void SignalHandler::setup()
+sigset_t SignalHandler::makeSignalSet()
 {
-    auto& logger = Logger::getInstance();
-
-    struct sigaction action{};
-
-    action.sa_handler = handleSignal;
-    sigemptyset(&action.sa_mask);
-    action.sa_flags = 0;
-
-    if (sigaction(SIGINT, &action, nullptr) == -1)
-    {
-        logger.error("SignalHandler::setup: Failed to register SIGINT");
-        throw std::runtime_error("Failed to register SIGINT handler");
-    }
-
-    if (sigaction(SIGTERM, &action, nullptr) == -1)
-    {
-        logger.error("SignalHandler::setup: Failed to register SIGTERM");
-        throw std::runtime_error("Failed to register SIGTERM handler");
-    }
-
-    logger.info("SignalHandler::setup: Signal handlers registered");
+    sigset_t set;
+    sigemptyset(&set);
+    sigaddset(&set, SIGINT);
+    sigaddset(&set, SIGTERM);
+    return set;
 }
 
-void SignalHandler::wait()
+void SignalHandler::blockSignals()
 {
-    auto& logger = Logger::getInstance();
+    sigset_t set = makeSignalSet();
 
-    logger.info("SignalHandler::wait: Waiting for signals");
-
-    while (running_)
+    if (pthread_sigmask(SIG_BLOCK, &set, nullptr) != 0)
     {
-        pause();
+        Logger::getInstance().error(
+            "SignalHandler::blockSignals: pthread_sigmask failed");
+        throw std::runtime_error("Failed to block signals");
     }
 
-    logger.info("SignalHandler::wait: Signal received, shutting down");
+    Logger::getInstance().info(
+        "SignalHandler::blockSignals: SIGINT/SIGTERM blocked");
 }
 
-void SignalHandler::handleSignal(int signal)
+SignalHandler::SignalHandler(ShutdownCoordinator& coordinator) :
+    coordinator_(coordinator)
+{}
+
+SignalHandler::~SignalHandler()
 {
-    if (signal == SIGINT)
+    if (thread_.joinable())
     {
-        write(STDOUT_FILENO, "\nSIGINT received\n", 17);
+        thread_.join();
     }
-    else if (signal == SIGTERM)
+}
+
+void SignalHandler::start()
+{
+    thread_ = std::thread(&SignalHandler::waitLoop, this);
+}
+
+void SignalHandler::waitLoop()
+{
+    auto& logger = Logger::getInstance();
+    logger.info("SignalHandler::waitLoop: Waiting for SIGINT/SIGTERM");
+
+    sigset_t set = makeSignalSet();
+    int receivedSignal = 0;
+
+    if (sigwait(&set, &receivedSignal) != 0)
     {
-        write(STDOUT_FILENO, "\nSIGTERM received\n", 18);
+        logger.error("SignalHandler::waitLoop: sigwait failed");
+        return;
     }
 
-    running_ = 0;
+    logger.info("SignalHandler::waitLoop: Received signal " +
+                std::to_string(receivedSignal) + ", requesting shutdown");
+
+    coordinator_.requestStop();
 }
 
 } // namespace calculator

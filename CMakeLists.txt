@@ -2,11 +2,14 @@ cmake_minimum_required(VERSION 3.10)
 
 project(calculator_hw)
 
+find_package(Threads REQUIRED)
+
 set(SOURCES_COMMON
     src/Application.cpp
     src/Logger.cpp
     src/DataBase.cpp
     src/SignalHandler.cpp
+    src/ShutdownCoordinator.cpp
 )
 
 set(INCLUDE_DIRS
@@ -18,6 +21,7 @@ set(LIBRARIES_COMMON
     nlohmann_json::nlohmann_json
     spdlog::spdlog
     PostgreSQL::PostgreSQL
+    Threads::Threads
 )
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)

@@ -1,8 +1,10 @@
 #include "Application.h"
 #include "Logger.h"
+#include "ShutdownCoordinator.h"
 #include "SignalHandler.h"
 
 #include <iostream>
+#include <thread>
 
 int main(int argc, char** argv)
 {
@@ -12,13 +14,35 @@ int main(int argc, char** argv)
     {
         logger.info("=== Application started ===");
 
-        calculator::SignalHandler::setup();
+        calculator::SignalHandler::blockSignals();
+
+        calculator::ShutdownCoordinator coordinator;
+        calculator::SignalHandler signalHandler(coordinator);
+        signalHandler.start();
 
         calculator::Application application;
-        application.run(argc, argv);
-        logger.info("=== Application waiting for signals ===");
 
-        calculator::SignalHandler::wait();
+        std::thread worker([&application, argc, argv]() {
+            auto& workerLogger = calculator::Logger::getInstance();
+            try
+            {
+                application.run(argc, argv);
+            }
+            catch (const std::exception& e)
+            {
+                workerLogger.error("=== Worker thread crashed: " +
+                                   std::string(e.what()) + " ===");
+                std::cerr << e.what() << '\n';
+            }
+        });
+
+        logger.info("=== Application waiting for signals ===");
+        coordinator.waitForStop();
+
+        if (worker.joinable())
+        {
+            worker.join();
+        }
 
         logger.info("=== Application finished successfully ===");
     }

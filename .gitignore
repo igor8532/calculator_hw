@@ -56,6 +56,7 @@ compile_commands.json
 *.tmp
 *.bak
 *.swp
+*.md
 
 # logs
 logs/
@@ -70,6 +71,10 @@ vcpkg_installed/
 # test output & cache
 Testing/
 .cache/
+
+# perf profiling data
+perf.data
+perf.data.old
 
 # VS Code
 .vscode/
