@@ -46,12 +46,17 @@ void DataBase::connect()
 
 void DataBase::disconnect()
 {
-    if (connection_) {
-        Logger::getInstance().info("DataBase::disconnect: Closing connection to PostgreSQL");
+    if (connection_)
+    {
+        Logger::getInstance().info(
+            "DataBase::disconnect: Closing connection to PostgreSQL");
         connection_.reset();
         Logger::getInstance().info("DataBase::disconnect: Connection closed");
-    } else {
-        Logger::getInstance().warn("DataBase::disconnect: Connection already closed");
+    }
+    else
+    {
+        Logger::getInstance().warn(
+            "DataBase::disconnect: Connection already closed");
     }
 }
 
@@ -126,11 +131,11 @@ std::optional<Task> DataBase::getRecord(const Task& task) const
 
     if (it == cache_.end())
     {
-        logger.info("DataBase::getRecord: Cache miss");
+        logger.debug("DataBase::getRecord: Cache miss");
         return std::nullopt;
     }
 
-    logger.info("DataBase::getRecord: Cache hit");
+    logger.debug("DataBase::getRecord: Cache hit");
     return it->second;
 }
 
