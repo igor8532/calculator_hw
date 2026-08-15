@@ -1,0 +1,25 @@
+[Unit]
+Description=Calculator HW service
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=exec
+ExecStart=/usr/local/bin/calculator_hw
+Restart=on-failure
+RestartSec=2
+TimeoutStopSec=10
+
+User=calculator
+Group=calculator
+
+StateDirectory=calculator_hw
+WorkingDirectory=/var/lib/calculator_hw
+
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

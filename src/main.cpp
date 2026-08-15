@@ -3,6 +3,7 @@
 #include "ShutdownCoordinator.h"
 #include "SignalHandler.h"
 
+#include <cstdlib>
 #include <iostream>
 #include <thread>
 
@@ -22,19 +23,28 @@ int main(int argc, char** argv)
 
         calculator::Application application;
 
-        std::thread worker([&application, argc, argv]() {
-            auto& workerLogger = calculator::Logger::getInstance();
-            try
-            {
-                application.run(argc, argv);
-            }
-            catch (const std::exception& e)
-            {
-                workerLogger.error("=== Worker thread crashed: " +
-                                   std::string(e.what()) + " ===");
-                std::cerr << e.what() << '\n';
-            }
-        });
+        std::thread worker;
+        if (argc > 1)
+        {
+            worker = std::thread([&application, argc, argv]() {
+                auto& workerLogger = calculator::Logger::getInstance();
+                try
+                {
+                    application.run(argc, argv);
+                }
+                catch (const std::exception& e)
+                {
+                    workerLogger.error("=== Worker thread crashed: " +
+                                       std::string(e.what()) + " ===");
+                    std::cerr << e.what() << '\n';
+                }
+            });
+        }
+        else
+        {
+            logger.info(
+                "=== No task provided, running in idle service mode ===");
+        }
 
         logger.info("=== Application waiting for signals ===");
         coordinator.waitForStop();
@@ -51,5 +61,8 @@ int main(int argc, char** argv)
         logger.error("=== Application crashed: " + std::string(e.what()) +
                      " ===");
         std::cerr << e.what() << '\n';
+        return EXIT_FAILURE;
     }
+
+    return EXIT_SUCCESS;
 }

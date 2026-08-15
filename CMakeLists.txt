@@ -73,6 +73,13 @@ install(TARGETS calculator_hw
     RUNTIME DESTINATION /usr/local/bin
 )
 
+option(ENABLE_SYSTEMD_UNIT_INSTALL "Install systemd service unit" ON)
+if(ENABLE_SYSTEMD_UNIT_INSTALL)
+    install(FILES packaging/systemd/calculator_hw.service
+        DESTINATION /etc/systemd/system
+    )
+endif()
+
 option(ENABLE_CLANG_FORMAT "Enable clang-format" ON)
 if(ENABLE_CLANG_FORMAT)
     find_program(CLANG_FORMAT_PATH NAMES clang-format-19 clang-format REQUIRED)
