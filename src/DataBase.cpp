@@ -46,7 +46,13 @@ void DataBase::connect()
 
 void DataBase::disconnect()
 {
-    connection_.reset();
+    if (connection_) {
+        Logger::getInstance().info("DataBase::disconnect: Closing connection to PostgreSQL");
+        connection_.reset();
+        Logger::getInstance().info("DataBase::disconnect: Connection closed");
+    } else {
+        Logger::getInstance().warn("DataBase::disconnect: Connection already closed");
+    }
 }
 
 std::string DataBase::makeCacheKey(const Task& task) const
