@@ -2,6 +2,8 @@
 
 #include "Logger.h"
 
+#include <pthread.h>
+
 #include <stdexcept>
 
 namespace calculator
@@ -39,6 +41,14 @@ SignalHandler::~SignalHandler()
 {
     if (thread_.joinable())
     {
+        // Поток может всё ещё ждать в sigwait(), если объект уничтожается
+        // из-за исключения при старте приложения, а не из-за настоящего
+        // SIGTERM/SIGINT. Без этого join() ниже заблокируется навсегда.
+        // SIGTERM здесь не завершает поток/процесс: сигнал заблокирован
+        // (blockSignals()) и синхронно вычитывается через sigwait() в
+        // этом же потоке, а не через дефолтный обработчик ОС.
+        // NOLINTNEXTLINE(bugprone-bad-signal-to-kill-thread)
+        pthread_kill(thread_.native_handle(), SIGTERM);
         thread_.join();
     }
 }

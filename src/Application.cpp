@@ -122,74 +122,74 @@ void Application::getTask(int argc, char** argv)
     logger.info("Application::getTask: JSON parsed successfully");
 }
 
-void Application::makeCalculate()
+void Application::makeCalculate(Task& task) const
 {
     auto& logger = Logger::getInstance();
     logger.debug("Application::makeCalculate: Starting calculation");
 
-    task_.status = 0;
-    switch (task_.operation)
+    task.status = 0;
+    switch (task.operation)
     {
         case '+':
-            task_.status = libmath::addition(task_.firstValue,
-                                             task_.secondValue, task_.result);
+            task.status = libmath::addition(task.firstValue, task.secondValue,
+                                            task.result);
             logger.debug("Application::makeCalculate: Addition: " +
-                         std::to_string(task_.firstValue) + " + " +
-                         std::to_string(task_.secondValue) + " = " +
-                         std::to_string(task_.result));
+                         std::to_string(task.firstValue) + " + " +
+                         std::to_string(task.secondValue) + " = " +
+                         std::to_string(task.result));
             break;
 
         case '-':
-            task_.status = libmath::subtraction(
-                task_.firstValue, task_.secondValue, task_.result);
+            task.status = libmath::subtraction(task.firstValue,
+                                               task.secondValue, task.result);
             logger.debug("Application::makeCalculate: Subtraction: " +
-                         std::to_string(task_.firstValue) + " - " +
-                         std::to_string(task_.secondValue) + " = " +
-                         std::to_string(task_.result));
+                         std::to_string(task.firstValue) + " - " +
+                         std::to_string(task.secondValue) + " = " +
+                         std::to_string(task.result));
             break;
 
         case '*':
-            task_.status = libmath::multiplication(
-                task_.firstValue, task_.secondValue, task_.result);
+            task.status = libmath::multiplication(
+                task.firstValue, task.secondValue, task.result);
             logger.debug("Application::makeCalculate: Multiplication: " +
-                         std::to_string(task_.firstValue) + " * " +
-                         std::to_string(task_.secondValue) + " = " +
-                         std::to_string(task_.result));
+                         std::to_string(task.firstValue) + " * " +
+                         std::to_string(task.secondValue) + " = " +
+                         std::to_string(task.result));
             break;
 
         case '/':
-            task_.status = libmath::division(task_.firstValue,
-                                             task_.secondValue, task_.result);
+            task.status = libmath::division(task.firstValue, task.secondValue,
+                                            task.result);
             logger.debug("Application::makeCalculate: Division: " +
-                         std::to_string(task_.firstValue) + " / " +
-                         std::to_string(task_.secondValue) + " = " +
-                         std::to_string(task_.result));
+                         std::to_string(task.firstValue) + " / " +
+                         std::to_string(task.secondValue) + " = " +
+                         std::to_string(task.result));
             break;
 
         case '^':
-            task_.status = libmath::power(task_.firstValue, task_.secondValue,
-                                          task_.result);
+            task.status =
+                libmath::power(task.firstValue, task.secondValue, task.result);
             logger.debug("Application::makeCalculate: Power: " +
-                         std::to_string(task_.firstValue) + " ^ " +
-                         std::to_string(task_.secondValue) + " = " +
-                         std::to_string(task_.result));
+                         std::to_string(task.firstValue) + " ^ " +
+                         std::to_string(task.secondValue) + " = " +
+                         std::to_string(task.result));
             break;
 
         case '!':
-            task_.status = libmath::factorial(task_.firstValue, task_.result);
+            task.status = libmath::factorial(task.firstValue, task.result);
             logger.debug("Application::makeCalculate: Factorial: " +
-                         std::to_string(task_.firstValue) +
-                         "! = " + std::to_string(task_.result));
+                         std::to_string(task.firstValue) +
+                         "! = " + std::to_string(task.result));
             break;
 
         default:
-            task_.status = 1;
+            task.status = 1;
             logger.error("Application::makeCalculate: Unknown operation: " +
-                         std::string(1, task_.operation));
+                         std::string(1, task.operation));
             break;
     }
 
-    switch (task_.status)
+    switch (task.status)
     {
         case 0:
             logger.info("Application::makeCalculate: Calculation completed "
@@ -225,9 +225,27 @@ void Application::makeCalculate()
 
         default:
             logger.error("Application::makeCalculate: Unknown error: " +
-                         std::to_string(task_.status));
+                         std::to_string(task.status));
             throw std::runtime_error("Unknown error");
     }
+}
+
+Task Application::processTask(const Task& request)
+{
+    auto& logger = Logger::getInstance();
+
+    if (const auto dbRecord = dataBase_.getRecord(request))
+    {
+        logger.info("Application::processTask: Cache hit");
+        return *dbRecord;
+    }
+
+    logger.info("Application::processTask: Cache miss");
+
+    Task result = request;
+    makeCalculate(result);
+    dataBase_.writeRecord(result);
+    return result;
 }
 
 void Application::printResult() const
@@ -262,15 +280,7 @@ void Application::run(int argc, char** argv)
     {
         getTask(argc, argv);
 
-        if (const auto dbRecord = dataBase_.getRecord(task_))
-        {
-            task_ = *dbRecord;
-        }
-        else
-        {
-            makeCalculate();
-            dataBase_.writeRecord(task_);
-        }
+        task_ = processTask(task_);
 
         printResult();
     }

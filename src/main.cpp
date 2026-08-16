@@ -1,10 +1,12 @@
 #include "Application.h"
 #include "Logger.h"
+#include "NetworkServer.h"
 #include "ShutdownCoordinator.h"
 #include "SignalHandler.h"
 
 #include <cstdlib>
 #include <iostream>
+#include <memory>
 #include <thread>
 
 int main(int argc, char** argv)
@@ -24,6 +26,8 @@ int main(int argc, char** argv)
         calculator::Application application;
 
         std::thread worker;
+        std::unique_ptr<calculator::NetworkServer> server;
+
         if (argc > 1)
         {
             worker = std::thread([&application, argc, argv]() {
@@ -42,8 +46,11 @@ int main(int argc, char** argv)
         }
         else
         {
-            logger.info(
-                "=== No task provided, running in idle service mode ===");
+            server = std::make_unique<calculator::NetworkServer>(application,
+                                                                 coordinator);
+            server->start();
+            worker = std::thread([&server]() { server->runEventLoop(); });
+            logger.info("=== Application listening for network requests ===");
         }
 
         logger.info("=== Application waiting for signals ===");

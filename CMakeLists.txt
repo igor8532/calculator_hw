@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.10)
 project(calculator_hw)
 
 find_package(Threads REQUIRED)
+find_package(Boost 1.74 REQUIRED COMPONENTS system)
 
 set(SOURCES_COMMON
     src/Application.cpp
@@ -10,6 +11,7 @@ set(SOURCES_COMMON
     src/DataBase.cpp
     src/SignalHandler.cpp
     src/ShutdownCoordinator.cpp
+    src/NetworkServer.cpp
 )
 
 set(INCLUDE_DIRS
@@ -22,6 +24,7 @@ set(LIBRARIES_COMMON
     spdlog::spdlog
     PostgreSQL::PostgreSQL
     Threads::Threads
+    Boost::system
 )
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -137,6 +140,7 @@ if(ENABLE_TESTS)
 
     add_executable(calculator_tests
         tests/test_calculator.cpp
+        tests/test_network.cpp
         ${SOURCES_COMMON}
     )
 
