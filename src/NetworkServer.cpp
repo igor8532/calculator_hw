@@ -1,5 +1,6 @@
 #include "NetworkServer.h"
 
+#include "EnvConfig.h"
 #include "Logger.h"
 #include "NetworkConfig.h"
 #include "TaskJson.h" // подтягивает nlohmann/json.hpp
@@ -22,16 +23,18 @@ void NetworkServer::start()
 {
     auto& logger = Logger::getInstance();
 
-    tcp::endpoint endpoint(boost::asio::ip::make_address(SERVER_HOST),
-                           SERVER_PORT);
+    const std::string host = getEnvOr("CALCULATOR_SERVER_HOST", SERVER_HOST);
+    const std::uint16_t port = getEnvOr("CALCULATOR_SERVER_PORT", SERVER_PORT);
+
+    tcp::endpoint endpoint(boost::asio::ip::make_address(host), port);
 
     acceptor_.open(endpoint.protocol());
     acceptor_.set_option(tcp::acceptor::reuse_address(true));
     acceptor_.bind(endpoint);
     acceptor_.listen();
 
-    logger.info("NetworkServer::start: Listening on " +
-                std::string(SERVER_HOST) + ":" + std::to_string(SERVER_PORT));
+    logger.info("NetworkServer::start: Listening on " + host + ":" +
+                std::to_string(port));
 
     doAccept();
 }

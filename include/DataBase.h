@@ -1,6 +1,7 @@
 #pragma once
 
 #include "DataBaseConfig.h"
+#include "EnvConfig.h"
 #include "Task.h"
 
 #include <libpq-fe.h>
@@ -19,11 +20,12 @@ class DataBase
   public:
     struct Config
     {
-        std::string host{DB_HOST};
-        std::uint16_t port{DB_PORT};
-        std::string database{DB_NAME};
-        std::string username{DB_USERNAME};
-        std::string password{DB_PASSWORD};
+        std::string host{getEnvOr("CALCULATOR_DB_HOST", DB_HOST)};
+        std::uint16_t port{getEnvOr("CALCULATOR_DB_PORT",
+                                    static_cast<std::uint16_t>(DB_PORT))};
+        std::string database{getEnvOr("CALCULATOR_DB_NAME", DB_NAME)};
+        std::string username{getEnvOr("CALCULATOR_DB_USER", DB_USERNAME)};
+        std::string password{getEnvOr("CALCULATOR_DB_PASSWORD", DB_PASSWORD)};
     };
 
     DataBase();

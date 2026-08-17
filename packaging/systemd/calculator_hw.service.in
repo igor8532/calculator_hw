@@ -5,7 +5,8 @@ Wants=postgresql.service
 
 [Service]
 Type=exec
-ExecStart=/usr/local/bin/calculator_hw
+ExecStart=@CALCULATOR_HW_EXECUTABLE@
+EnvironmentFile=-/etc/calculator_hw/calculator_hw.env
 Restart=on-failure
 RestartSec=2
 TimeoutStopSec=10

@@ -62,13 +62,37 @@ use. On shutdown, the acceptor is closed from the signal-handling thread via
 request is allowed to finish, but no new connections are accepted, and the
 event loop returns once there is no more pending work.
 
+## Configuration
+
+Database and network settings can be overridden via environment variables
+(defaults shown, matching [DataBaseConfig.h](include/DataBaseConfig.h)/
+[NetworkConfig.h](include/NetworkConfig.h)):
+
+| Variable                | Default      |
+|--------------------------|--------------|
+| `CALCULATOR_DB_HOST`     | `localhost`  |
+| `CALCULATOR_DB_PORT`     | `5432`       |
+| `CALCULATOR_DB_NAME`     | `calculator` |
+| `CALCULATOR_DB_USER`     | `calculator` |
+| `CALCULATOR_DB_PASSWORD` | `calculator` |
+| `CALCULATOR_SERVER_HOST` | `0.0.0.0`    |
+| `CALCULATOR_SERVER_PORT` | `5555`       |
+
+Under systemd (both manual install and the `.deb` package), these are read
+from `/etc/calculator_hw/calculator_hw.env` (`EnvironmentFile=-` in the
+unit — the file is optional, missing values fall back to the defaults
+above).
+
 ## Running as a systemd service
 
-The unit file is installed to `/etc/systemd/system/calculator_hw.service` as
-part of `cmake --install` (see [packaging/systemd/calculator_hw.service](packaging/systemd/calculator_hw.service)).
-It runs the binary with no arguments (network service mode) under a
-dedicated `calculator` system user and relies on the graceful `SIGTERM`
-handling in
+The unit file is generated from
+[packaging/systemd/calculator_hw.service.in](packaging/systemd/calculator_hw.service.in)
+(via CMake `configure_file()`, so `ExecStart` always matches wherever the
+binary actually gets installed) and installed to
+`/usr/lib/systemd/system/calculator_hw.service` as part of
+`cmake --install`. It runs the binary with no arguments (network service
+mode) under a dedicated `calculator` system user and relies on the graceful
+`SIGTERM` handling in
 [SignalHandler](src/SignalHandler.cpp)/[ShutdownCoordinator](src/ShutdownCoordinator.cpp)
 for clean shutdown (closing the database connection and network socket via
 RAII).
@@ -108,6 +132,41 @@ read the reply, then the server closes the connection):
 telnet localhost 5555
 {"firstValue":5,"operation":"!"}
 ```
+
+## Building a .deb package
+
+Packaging is done with CPack. In addition to the build dependencies above,
+this needs `dpkg-dev` (for `dpkg-shlibdeps`, which CPack uses to compute the
+package's runtime dependencies automatically):
+
+```sh
+sudo apt install dpkg-dev
+```
+
+```sh
+cmake -S . -B build-deb -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release
+cmake --build build-deb
+cd build-deb && cpack -G DEB
+```
+
+`-DCMAKE_INSTALL_PREFIX=/usr` matters: it must match what CPack packages,
+otherwise the generated systemd unit's `ExecStart` won't point at the path
+the binary actually ends up in inside the package.
+
+```sh
+sudo dpkg -i calculator-hw-1.0.0-Linux.deb # calculator-hw-1.0.0-<arch>.deb
+sudo apt install -f   # pull in any missing runtime dependencies
+psql -h localhost -U calculator -d calculator -f /usr/share/calculator_hw/schema.sql
+sudo systemctl start calculator_hw
+```
+
+The package ships the binary (`/usr/bin/calculator_hw`), the systemd unit,
+`/etc/calculator_hw/calculator_hw.env` (a conffile — see "Configuration"
+above) and `/usr/share/calculator_hw/schema.sql`. Its `postinst` creates the
+`calculator` system user and enables the unit; `prerm` stops the running
+service (`systemctl stop`) before files are removed, which triggers the same
+graceful `SIGTERM` shutdown described above — the database connection and
+any open socket are closed via RAII before the package finishes uninstalling.
 
 ## Tests
 

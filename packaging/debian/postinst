@@ -1,0 +1,13 @@
+#!/bin/sh
+set -e
+
+if ! getent passwd calculator >/dev/null 2>&1; then
+    useradd --system --no-create-home --shell /usr/sbin/nologin calculator
+fi
+
+if [ -d /run/systemd/system ]; then
+    systemctl daemon-reload || true
+    systemctl enable calculator_hw.service || true
+fi
+
+exit 0
