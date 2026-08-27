@@ -1,12 +1,19 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(calculator_hw)
+project(calculator_hw VERSION 1.0.0)
+
+include(GNUInstallDirs)
+
+find_package(Threads REQUIRED)
+find_package(Boost 1.74 REQUIRED COMPONENTS system)
 
 set(SOURCES_COMMON
     src/Application.cpp
     src/Logger.cpp
     src/DataBase.cpp
     src/SignalHandler.cpp
+    src/ShutdownCoordinator.cpp
+    src/NetworkServer.cpp
 )
 
 set(INCLUDE_DIRS
@@ -18,6 +25,8 @@ set(LIBRARIES_COMMON
     nlohmann_json::nlohmann_json
     spdlog::spdlog
     PostgreSQL::PostgreSQL
+    Threads::Threads
+    Boost::system
 )
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -66,8 +75,31 @@ target_link_libraries(calculator_hw
 )
 
 install(TARGETS calculator_hw
-    RUNTIME DESTINATION /usr/local/bin
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
+
+install(FILES packaging/calculator_hw.env
+    DESTINATION /etc/calculator_hw
+)
+
+install(FILES sql/schema.sql
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/calculator_hw
+)
+
+option(ENABLE_SYSTEMD_UNIT_INSTALL "Install systemd service unit" ON)
+if(ENABLE_SYSTEMD_UNIT_INSTALL)
+    set(CALCULATOR_HW_EXECUTABLE "${CMAKE_INSTALL_FULL_BINDIR}/calculator_hw")
+
+    configure_file(
+        packaging/systemd/calculator_hw.service.in
+        ${CMAKE_BINARY_DIR}/calculator_hw.service
+        @ONLY
+    )
+
+    install(FILES ${CMAKE_BINARY_DIR}/calculator_hw.service
+        DESTINATION /usr/lib/systemd/system
+    )
+endif()
 
 option(ENABLE_CLANG_FORMAT "Enable clang-format" ON)
 if(ENABLE_CLANG_FORMAT)
@@ -126,6 +158,7 @@ if(ENABLE_TESTS)
 
     add_executable(calculator_tests
         tests/test_calculator.cpp
+        tests/test_network.cpp
         ${SOURCES_COMMON}
     )
 
@@ -164,4 +197,42 @@ if(ENABLE_TESTS)
     else()
         message(WARNING "Valgrind not found. Skipping Valgrind test.")
     endif()
+endif()
+
+option(ENABLE_PACKAGING "Enable CPack DEB packaging" ON)
+if(ENABLE_PACKAGING)
+    set(CPACK_PACKAGE_NAME "calculator-hw")
+    set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
+    set(CPACK_PACKAGE_VENDOR "calculator_hw project")
+    set(CPACK_PACKAGE_DESCRIPTION_SUMMARY
+        "Calculator service with PostgreSQL cache and TCP API")
+    set(CPACK_PACKAGE_CONTACT "Volga1223@yandex.ru")
+
+    set(CPACK_GENERATOR "DEB")
+    set(CPACK_DEBIAN_PACKAGE_MAINTAINER "${CPACK_PACKAGE_CONTACT}")
+    set(CPACK_DEBIAN_PACKAGE_SECTION "net")
+
+    find_program(DPKG_EXECUTABLE dpkg)
+    if(DPKG_EXECUTABLE)
+        execute_process(
+            COMMAND ${DPKG_EXECUTABLE} --print-architecture
+            OUTPUT_VARIABLE CPACK_DEBIAN_PACKAGE_ARCHITECTURE
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+        )
+    endif()
+
+    # dpkg-shlibdeps (пакет dpkg-dev) вычисляет реальные runtime-зависимости
+    # (libpq, libboost-system и т.д.) по собранному бинарнику, вместо того
+    # чтобы поддерживать список версий вручную.
+    set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS "postgresql-client")
+
+    set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
+        "${CMAKE_SOURCE_DIR}/packaging/debian/postinst"
+        "${CMAKE_SOURCE_DIR}/packaging/debian/prerm"
+        "${CMAKE_SOURCE_DIR}/packaging/debian/postrm"
+    )
+    set(CPACK_DEBIAN_PACKAGE_CONFFILES "/etc/calculator_hw/calculator_hw.env")
+
+    include(CPack)
 endif()

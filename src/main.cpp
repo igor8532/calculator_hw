@@ -1,8 +1,13 @@
 #include "Application.h"
 #include "Logger.h"
+#include "NetworkServer.h"
+#include "ShutdownCoordinator.h"
 #include "SignalHandler.h"
 
+#include <cstdlib>
 #include <iostream>
+#include <memory>
+#include <thread>
 
 int main(int argc, char** argv)
 {
@@ -12,13 +17,49 @@ int main(int argc, char** argv)
     {
         logger.info("=== Application started ===");
 
-        calculator::SignalHandler::setup();
+        calculator::SignalHandler::blockSignals();
+
+        calculator::ShutdownCoordinator coordinator;
+        calculator::SignalHandler signalHandler(coordinator);
+        signalHandler.start();
 
         calculator::Application application;
-        application.run(argc, argv);
-        logger.info("=== Application waiting for signals ===");
 
-        calculator::SignalHandler::wait();
+        std::thread worker;
+        std::unique_ptr<calculator::NetworkServer> server;
+
+        if (argc > 1)
+        {
+            worker = std::thread([&application, argc, argv]() {
+                auto& workerLogger = calculator::Logger::getInstance();
+                try
+                {
+                    application.run(argc, argv);
+                }
+                catch (const std::exception& e)
+                {
+                    workerLogger.error("=== Worker thread crashed: " +
+                                       std::string(e.what()) + " ===");
+                    std::cerr << e.what() << '\n';
+                }
+            });
+        }
+        else
+        {
+            server = std::make_unique<calculator::NetworkServer>(application,
+                                                                 coordinator);
+            server->start();
+            worker = std::thread([&server]() { server->runEventLoop(); });
+            logger.info("=== Application listening for network requests ===");
+        }
+
+        logger.info("=== Application waiting for signals ===");
+        coordinator.waitForStop();
+
+        if (worker.joinable())
+        {
+            worker.join();
+        }
 
         logger.info("=== Application finished successfully ===");
     }
@@ -27,5 +68,8 @@ int main(int argc, char** argv)
         logger.error("=== Application crashed: " + std::string(e.what()) +
                      " ===");
         std::cerr << e.what() << '\n';
+        return EXIT_FAILURE;
     }
+
+    return EXIT_SUCCESS;
 }

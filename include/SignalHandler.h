@@ -1,6 +1,9 @@
 #pragma once
 
+#include "ShutdownCoordinator.h"
+
 #include <csignal>
+#include <thread>
 
 namespace calculator
 {
@@ -8,13 +11,25 @@ namespace calculator
 class SignalHandler
 {
   public:
-    static void setup();
-    static void wait();
+    explicit SignalHandler(ShutdownCoordinator& coordinator);
+    ~SignalHandler();
+
+    SignalHandler(const SignalHandler&) = delete;
+    SignalHandler& operator=(const SignalHandler&) = delete;
+
+    // Вызывать в main-потоке ДО создания любых std::thread —
+    // маска сигналов наследуется потоками на момент их создания.
+    static void blockSignals();
+
+    void start();
 
   private:
-    static void handleSignal(int signal);
+    void waitLoop();
 
-    static volatile sig_atomic_t running_;
+    static sigset_t makeSignalSet();
+
+    ShutdownCoordinator& coordinator_;
+    std::thread thread_;
 };
 
 } // namespace calculator

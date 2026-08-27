@@ -1,0 +1,13 @@
+#!/bin/sh
+set -e
+
+if [ "$1" = "purge" ]; then
+    if [ -d /run/systemd/system ]; then
+        systemctl daemon-reload || true
+    fi
+    if getent passwd calculator >/dev/null 2>&1; then
+        deluser --system calculator || true
+    fi
+fi
+
+exit 0
